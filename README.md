@@ -1,450 +1,325 @@
-# 🏦 Инструкция по запуску Banking Modern Data Stack с ClickHouse
+# 🏦 Banking Modern Data Stack
 
-Этот проект демонстрирует **end-to-end modern data stack pipeline** для банковского домена с использованием ClickHouse вместо Snowflake.
-
----
-
-## 📋 Требования к системе
-
-### Необходимое ПО
-- **Docker Desktop** (версия 20.10 или выше)
-- **Docker Compose** (версия 1.29 или выше)
-- **Python** 3.8+ (для локального запуска генератора данных)
-- **Git** (для клонирования репозитория)
-- Минимум **8 GB RAM** для комфортной работы всех контейнеров
-- Минимум **10 GB** свободного места на диске
-
-### Порты (должны быть свободны)
-- `5432` - PostgreSQL (OLTP база)
-- `5433` - Airflow PostgreSQL
-- `2181` - Zookeeper
-- `9092`, `29092` - Kafka
-- `8083` - Kafka Connect (Debezium)
-- `9000` - MinIO API
-- `9001` - MinIO Console
-- `8123` - ClickHouse HTTP
-- `9002` - ClickHouse Native Protocol
-- `8080` - Airflow Web UI
+![ClickHouse](https://img.shields.io/badge/ClickHouse-FFCC01?logo=clickhouse&logoColor=black)
+![DBT](https://img.shields.io/badge/dbt-FF694B?logo=dbt&logoColor=white)
+![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-017CEE?logo=apacheairflow&logoColor=white)
+![Apache Kafka](https://img.shields.io/badge/Apache%20Kafka-231F20?logo=apachekafka&logoColor=white)
+![Debezium](https://img.shields.io/badge/Debezium-EF3B2D?logo=apache&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+![Git](https://img.shields.io/badge/Git-F05032?logo=git&logoColor=white)
+![CI/CD](https://img.shields.io/badge/CI%2FCD-000000?logo=githubactions&logoColor=white)
 
 ---
 
-## 🚀 Шаг 1: Клонирование репозитория
+## 📌 Project Overview
 
+This project demonstrates an **end-to-end modern data stack pipeline** for a **Banking domain**.  
+We simulate **customer, account, and transaction data**, stream changes in real time, transform them into analytics-ready models, and visualize insights — following **best practices of CI/CD and data warehousing**.
+
+👉 Think of it as a **real-world banking data ecosystem** built on modern data tools with **ClickHouse** as the analytical database.
+
+---
+
+## 🏗️ Architecture  
+
+**Pipeline Flow:**
+1. **Data Generator** → Simulates banking transactions, accounts & customers (via Faker).  
+2. **Kafka + Debezium** → Streams change data (CDC) from PostgreSQL into MinIO (S3-compatible storage).  
+3. **Airflow** → Orchestrates data ingestion from MinIO to ClickHouse.  
+4. **ClickHouse** → OLAP Data Warehouse (Bronze → Silver → Gold).  
+5. **DBT** → Applies transformations, builds marts & snapshots (SCD Type-2).  
+6. **CI/CD with GitHub Actions** → Automated tests, build & deployment.  
+
+---
+
+## ⚡ Tech Stack
+
+- **ClickHouse** → Fast OLAP Database for Analytics  
+- **DBT** → Transformations, testing, snapshots (SCD Type-2)  
+- **Apache Airflow** → Orchestration & DAG scheduling  
+- **Apache Kafka + Debezium** → Real-time streaming & CDC  
+- **MinIO** → S3-compatible object storage  
+- **Postgres** → Source OLTP system  
+- **Python (Faker)** → Data simulation  
+- **Docker & docker-compose** → Containerized setup  
+- **Git & GitHub Actions** → CI/CD workflows  
+
+---
+
+## ✅ Key Features
+
+- **PostgreSQL OLTP**: Source relational database with ACID guarantees (customers, accounts, transactions)  
+- **Simulated banking system**: customers, accounts, and transactions  
+- **Change Data Capture (CDC)** via Kafka + Debezium (capturing Postgres WAL)  
+- **Raw → Staging → Fact/Dimension** models in DBT  
+- **Snapshots for history tracking** (slowly changing dimensions)  
+- **Automated pipeline orchestration** using Airflow  
+- **CI/CD pipeline** with dbt tests + GitHub Actions  
+- **ClickHouse as analytical database** with MergeTree engine for high performance
+
+---
+
+## 📂 Repository Structure
+
+```text
+banking-modern-datastack/
+├── .github/workflows/         # CI/CD pipelines (ci.yml, cd.yml)
+├── banking_dbt/              # DBT project
+│   ├── models/
+│   │   ├── staging/           # Staging models
+│   │   ├── marts/             # Facts & dimensions
+│   │   └── sources.yml
+│   ├── snapshots/             # SCD2 snapshots
+│   ├── profiles/              # DBT profiles (ClickHouse connection)
+│   └── dbt_project.yml
+├── consumer/
+│   └── kafka_to_minio.py      # Kafka consumer → MinIO writer
+├── data-generator/            # Faker-based data simulator
+│   └── faker_generator.py
+├── docker/                    # Airflow DAGs, ClickHouse init scripts
+│   ├── dags/                  # DAGs (minio_to_clickhouse, scd_snapshots)
+│   └── clickhouse/
+│       └── init/              # ClickHouse initialization SQL
+├── kafka-debezium/            # Kafka connectors & CDC logic
+│   └── generate_and_post_connector.py
+├── postgres/                  # Postgres schema (OLTP DDL & seeds)
+│   └── schema.sql
+├── .env.example               # Example environment variables
+├── .gitignore
+├── docker-compose.yml         # Containerized infrastructure
+├── dockerfile-airflow.dockerfile
+├── requirements.txt
+├── INSTALLATION_RU.md         # 🇷🇺 Detailed installation guide (Russian)
+├── USAGE_RU.md                # 🇷🇺 Usage guide (Russian)
+└── README.md
+```
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Docker Desktop (20.10+)
+- Docker Compose (1.29+)
+- Python 3.8+ (for data generator)
+- 8 GB RAM minimum
+- 10 GB free disk space
+
+### Installation
+
+**📖 Detailed Russian guide:** [INSTALLATION_RU.md](INSTALLATION_RU.md)
+
+1. **Clone the repository:**
 ```bash
-git clone <URL вашего репозитория>
+git clone <repository_url>
 cd banking-modern-datastack
 ```
 
----
-
-## ⚙️ Шаг 2: Настройка переменных окружения
-
-1. Скопируйте пример файла с переменными окружения:
-
+2. **Set up environment variables:**
 ```bash
-# Windows PowerShell
-Copy-Item .env.example .env
-
-# или вручную создайте файл .env
+cp .env.example .env
+# Edit .env if needed
 ```
 
-2. Откройте файл `.env` и при необходимости измените параметры (по умолчанию все настроено):
-
-\`\`\`env
-# PostgreSQL (OLTP Source)
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_DB=banking
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres123
-
-# ClickHouse
-CLICKHOUSE_HOST=clickhouse
-CLICKHOUSE_PORT=9002
-CLICKHOUSE_USER=default
-CLICKHOUSE_PASSWORD=clickhouse123
-CLICKHOUSE_DB=banking
-
-# MinIO
-MINIO_ENDPOINT=http://host.docker.internal:9000
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
-MINIO_BUCKET=banking-raw
-
-# Kafka
-KAFKA_BOOTSTRAP=host.docker.internal:29092
-KAFKA_GROUP=banking-cdc-consumer
-\`\`\`
-
----
-
-## 🐳 Шаг 3: Запуск инфраструктуры через Docker Compose
-
-1. **Запустите все сервисы:**
-
-\`\`\`bash
+3. **Start all services:**
+```bash
 docker-compose up -d
-\`\`\`
+```
 
-2. **Проверьте статус контейнеров:**
+4. **Initialize PostgreSQL schema:**
+```bash
+docker exec -i <postgres_container> psql -U postgres -d banking < postgres/schema.sql
+```
 
-\`\`\`bash
-docker-compose ps
-\`\`\`
-
-Все сервисы должны быть в статусе `Up`:
-- `zookeeper`
-- `kafka`
-- `connect` (Debezium)
-- `postgres`
-- `clickhouse`
-- `minio`
-- `airflow-webserver`
-- `airflow-scheduler`
-- `airflow-postgres`
-
-3. **Просмотр логов (если что-то не работает):**
-
-\`\`\`bash
-# Все сервисы
-docker-compose logs -f
-
-# Конкретный сервис
-docker-compose logs -f clickhouse
-docker-compose logs -f kafka
-\`\`\`
-
----
-
-## 🗄️ Шаг 4: Инициализация PostgreSQL (OLTP база)
-
-1. **Подключитесь к PostgreSQL контейнеру:**
-
-\`\`\`bash
-docker exec -it <POSTGRES_CONTAINER_ID> psql -U postgres -d banking
-\`\`\`
-
-Или используйте GUI клиент (DBeaver, pgAdmin):
-- Host: `localhost`
-- Port: `5432`
-- Database: `banking`
-- User: `postgres`
-- Password: `postgres123`
-
-2. **Выполните SQL скрипт для создания схемы:**
-
-\`\`\`bash
-docker exec -i <POSTGRES_CONTAINER_ID> psql -U postgres -d banking < postgres/schema.sql
-\`\`\`
-
-Или скопируйте содержимое файла `postgres/schema.sql` и выполните его вручную.
-
----
-
-## 🔌 Шаг 5: Настройка Debezium Connector (CDC)
-
-1. **Дождитесь, пока Kafka Connect будет готов** (обычно 30-60 секунд после запуска):
-
-\`\`\`bash
-# Проверка статуса Kafka Connect
-curl http://localhost:8083/connectors
-\`\`\`
-
-Должен вернуть `[]` (пустой массив).
-
-2. **Установите зависимости Python:**
-
-\`\`\`bash
+5. **Install Python dependencies:**
+```bash
 pip install -r requirements.txt
-\`\`\`
+```
 
-3. **Запустите скрипт для создания Debezium connector:**
-
-\`\`\`bash
+6. **Create Debezium connector:**
+```bash
 python kafka-debezium/generate_and_post_connector.py
-\`\`\`
+```
 
-4. **Проверьте, что connector создан:**
-
-\`\`\`bash
-curl http://localhost:8083/connectors
-\`\`\`
-
-Должен вернуть список с вашим connector.
-
----
-
-## 📊 Шаг 6: Генерация тестовых данных
-
-1. **Запустите генератор данных один раз:**
-
-\`\`\`bash
+7. **Generate test data:**
+```bash
 python data-generator/faker_generator.py --once
-\`\`\`
+```
 
-Эта команда сгенерирует:
-- 10 клиентов
-- 20 счетов (по 2 на клиента)
-- 50 транзакций
-
-2. **Для непрерывной генерации данных** (запускается в фоне):
-
-\`\`\`bash
-python data-generator/faker_generator.py
-\`\`\`
-
-Программа будет генерировать данные каждые 2 секунды. Нажмите `Ctrl+C` для остановки.
-
----
-
-## 📦 Шаг 7: Запуск Kafka Consumer (MinIO)
-
-**Consumer читает данные из Kafka и сохраняет в MinIO в формате Parquet.**
-
-1. **Запустите consumer:**
-
-\`\`\`bash
+8. **Start Kafka consumer:**
+```bash
 python consumer/kafka_to_minio.py
-\`\`\`
+```
 
-2. **Проверьте MinIO Console:**
-
-Откройте в браузере: http://localhost:9001
-
-Логин: `minioadmin`  
-Пароль: `minioadmin`
-
-В bucket `banking-raw` должны появиться папки:
-- `customers/`
-- `accounts/`
-- `transactions/`
-
-С файлами в формате Parquet.
-
----
-
-## ✈️ Шаг 8: Инициализация Airflow
-
-1. **Создайте администратора Airflow (только при первом запуске):**
-
-\`\`\`bash
-docker exec -it airflow-webserver airflow users create \\
-    --username admin \\
-    --firstname Admin \\
-    --lastname User \\
-    --role Admin \\
-    --email admin@example.com \\
+9. **Initialize Airflow:**
+```bash
+docker exec -it airflow-webserver airflow users create \
+    --username admin \
+    --firstname Admin \
+    --lastname User \
+    --role Admin \
+    --email admin@example.com \
     --password admin
-\`\`\`
+```
 
-2. **Откройте Airflow UI:**
+10. **Access Airflow UI and trigger DAGs:**
+- URL: http://localhost:8080
+- Login: admin / admin
+- Enable and run: `minio_to_clickhouse_banking`
 
-URL: http://localhost:8080
-
-Логин: `admin`  
-Пароль: `admin`
-
-3. **Включите DAGs:**
-
-Найдите и включите (toggle ON) следующие DAGs:
-- `minio_to_clickhouse_banking` - загрузка данных из MinIO в ClickHouse (каждые 5 минут)
-- `SCD2_snapshots` - создание снапшотов для SCD Type 2 (ежедневно)
-
-4. **Запустите DAG вручную (для тестирования):**
-
-Нажмите кнопку "▶" рядом с DAG `minio_to_clickhouse_banking`.
-
----
-
-## 🎯 Шаг 9: Настройка DBT
-
-1. **Войдите в контейнер Airflow:**
-
-\`\`\`bash
+11. **Run DBT models:**
+```bash
 docker exec -it airflow-scheduler bash
-\`\`\`
-
-2. **Скопируйте профиль DBT:**
-
-\`\`\`bash
-mkdir -p /home/airflow/.dbt
-cp /opt/airflow/banking_dbt/profiles/profiles.yml /home/airflow/.dbt/profiles.yml
-\`\`\`
-
-3. **Проверьте подключение DBT к ClickHouse:**
-
-\`\`\`bash
 cd /opt/airflow/banking_dbt
-dbt debug --profiles-dir /home/airflow/.dbt
-\`\`\`
-
-Должно вывести: `All checks passed!`
-
-4. **Установите зависимости DBT:**
-
-\`\`\`bash
-dbt deps --profiles-dir /home/airflow/.dbt
-\`\`\`
-
----
-
-## 🔄 Шаг 10: Запуск DBT трансформаций
-
-1. **Выполните DBT models (staging + marts):**
-
-\`\`\`bash
-cd /opt/airflow/banking_dbt
+cp profiles/profiles.yml /home/airflow/.dbt/profiles.yml
 dbt run --profiles-dir /home/airflow/.dbt
-\`\`\`
-
-Это создаст:
-- **Staging views**: `stg_customers`, `stg_accounts`, `stg_transactions`
-- **Marts tables**: `dim_customers`, `dim_accounts`, `fact_transactions`
-
-2. **Выполните snapshots (SCD Type 2):**
-
-\`\`\`bash
 dbt snapshot --profiles-dir /home/airflow/.dbt
-\`\`\`
-
-Это создаст:
-- `customers_snapshot`
-- `accounts_snapshot`
-
-3. **Запустите тесты DBT:**
-
-\`\`\`bash
-dbt test --profiles-dir /home/airflow/.dbt
-\`\`\`
+```
 
 ---
 
-## ✅ Шаг 11: Проверка данных в ClickHouse
+## 🌐 Access Points
 
-1. **Откройте ClickHouse Play UI:**
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Airflow UI | http://localhost:8080 | admin / admin |
+| MinIO Console | http://localhost:9001 | minioadmin / minioadmin |
+| ClickHouse Play | http://localhost:8123/play | - |
+| PostgreSQL | localhost:5432 | postgres / postgres123 |
+| ClickHouse Native | localhost:9002 | default / clickhouse123 |
 
-URL: http://localhost:8123/play
+---
 
-2. **Выполните запросы для проверки данных:**
+## 📊 Data Flow
 
-\`\`\`sql
--- Проверка raw таблиц
-SELECT count() FROM banking.raw_customers;
-SELECT count() FROM banking.raw_accounts;
-SELECT count() FROM banking.raw_transactions;
+1. **PostgreSQL** ← Faker generates banking data
+2. **Debezium** ← Captures changes from PostgreSQL (CDC)
+3. **Kafka** ← Streams change events
+4. **Consumer** ← Reads from Kafka, writes Parquet to MinIO
+5. **Airflow DAG** ← Loads data from MinIO to ClickHouse (raw tables)
+6. **DBT** ← Transforms: raw → staging → marts (dimensions/facts)
+7. **Snapshots** ← Creates historical snapshots (SCD Type-2)
 
--- Проверка staging views
-SELECT count() FROM banking.silver.stg_customers;
-SELECT count() FROM banking.silver.stg_accounts;
-SELECT count() FROM banking.silver.stg_transactions;
+### ClickHouse Layers
 
--- Проверка marts
-SELECT * FROM banking.silver.dim_customers LIMIT 10;
-SELECT * FROM banking.silver.dim_accounts LIMIT 10;
-SELECT * FROM banking.silver.fact_transactions LIMIT 10;
+- **Bronze (Raw)**: `banking.raw_*` - Raw data from MinIO
+- **Silver (Staging)**: `banking.silver.stg_*` - Cleaned views
+- **Gold (Marts)**: `banking.silver.dim_*`, `banking.silver.fact_*`, `banking.gold.*_snapshot` - Analytics-ready
 
--- Проверка snapshots
-SELECT count() FROM banking.gold.customers_snapshot;
-SELECT count() FROM banking.gold.accounts_snapshot;
-\`\`\`
+---
 
-3. **Аналитический запрос (пример):**
+## 📖 Documentation
 
-\`\`\`sql
+- **🇷🇺 [Подробная инструкция по установке (Russian)](INSTALLATION_RU.md)**
+- **🇷🇺 [Руководство по использованию (Russian)](USAGE_RU.md)**
+
+---
+
+## 🔍 Sample Queries
+
+```sql
+-- Top 10 customers by transaction volume
 SELECT 
     c.first_name,
     c.last_name,
     COUNT(t.transaction_id) as total_transactions,
-    SUM(t.amount) as total_amount
+    ROUND(SUM(t.amount), 2) as total_amount
 FROM banking.silver.fact_transactions t
 JOIN banking.silver.dim_customers c ON t.customer_id = c.customer_id
 WHERE c.is_current = 1
 GROUP BY c.first_name, c.last_name
 ORDER BY total_amount DESC
 LIMIT 10;
-\`\`\`
+
+-- Account type statistics
+SELECT 
+    account_type,
+    COUNT(*) as total_accounts,
+    ROUND(AVG(balance), 2) as avg_balance,
+    ROUND(SUM(balance), 2) as total_balance
+FROM banking.silver.dim_accounts
+WHERE is_current = 1
+GROUP BY account_type;
+```
 
 ---
 
-## 🔄 Полный цикл работы системы
+## 🛠️ Development
 
-### Поток данных:
+### Adding New Tables
+1. Create table in PostgreSQL (`postgres/schema.sql`)
+2. Update Debezium connector
+3. Add to consumer (`consumer/kafka_to_minio.py`)
+4. Create raw table in ClickHouse (`docker/clickhouse/init/01_init.sql`)
+5. Add to Airflow DAG
+6. Create DBT staging model
+7. Create marts as needed
 
-1. **Data Generator** → генерирует данные в PostgreSQL
-2. **Debezium** → захватывает изменения (CDC) из PostgreSQL
-3. **Kafka** → стримит события изменений
-4. **Consumer** → читает из Kafka и пишет Parquet файлы в MinIO
-5. **Airflow DAG** → периодически загружает данные из MinIO в ClickHouse (raw таблицы)
-6. **DBT** → трансформирует raw → staging → marts/dimensions/facts
-7. **Snapshots** → создают исторические снимки для SCD Type 2
-
-### Архитектурные слои в ClickHouse:
-
-- **Bronze (Raw)**: `banking.raw_*` - исходные данные из MinIO
-- **Silver (Staging)**: `banking.silver.stg_*` - очищенные view
-- **Gold (Marts)**: `banking.silver.dim_*`, `banking.silver.fact_*`, `banking.gold.*_snapshot` - готовые для аналитики
-
----
-
-## 🛑 Остановка системы
-
-\`\`\`bash
-# Остановить все контейнеры
-docker-compose down
-
-# Остановить и удалить все данные (volumes)
-docker-compose down -v
-\`\`\`
+### Running Tests
+```bash
+cd banking_dbt
+dbt test --profiles-dir /home/airflow/.dbt
+```
 
 ---
 
-## 🔧 Troubleshooting
+## 📊 CI/CD
 
-### Проблема: Контейнер не запускается
-
-\`\`\`bash
-# Просмотр логов
-docker-compose logs -f <service_name>
-
-# Перезапуск контейнера
-docker-compose restart <service_name>
-\`\`\`
-
-### Проблема: Порт уже занят
-
-Измените порты в `docker-compose.yml` на свободные.
-
-### Проблема: DBT не может подключиться к ClickHouse
-
-1. Проверьте, что ClickHouse запущен:
-\`\`\`bash
-docker ps | grep clickhouse
-\`\`\`
-
-2. Проверьте переменные окружения в `.env`
-
-3. Проверьте `profiles.yml`
-
-### Проблема: Нет данных в MinIO
-
-1. Проверьте, что Kafka работает
-2. Проверьте, что Debezium connector создан
-3. Проверьте логи consumer
-
-### Проблема: Данные не попадают в ClickHouse
-
-1. Проверьте логи Airflow DAG
-2. Проверьте, что файлы есть в MinIO
-3. Проверьте подключение к ClickHouse из Airflow:
-\`\`\`bash
-docker exec -it airflow-scheduler bash
-python -c "from clickhouse_driver import Client; client = Client(host='clickhouse', port=9002); print(client.execute('SELECT version()'))"
-\`\`\`
+The project includes GitHub Actions workflows:
+- **ci.yml** → Lint, dbt compile, run tests
+- **cd.yml** → Deploy DAGs & dbt models on merge
 
 ---
 
-## 📞 Поддержка
+## 🐛 Troubleshooting
 
-При возникновении вопросов создайте Issue в репозитории или свяжитесь с maintainer.
+Common issues and solutions:
+
+1. **Container won't start**: Check logs with `docker-compose logs -f <service>`
+2. **Port conflicts**: Modify ports in `docker-compose.yml`
+3. **DBT connection issues**: Verify `profiles.yml` and environment variables
+4. **No data in ClickHouse**: Check Airflow DAG logs and MinIO contents
+
+For detailed troubleshooting, see [USAGE_RU.md](USAGE_RU.md).
+
+---
+
+## 📈 Performance
+
+ClickHouse provides:
+- **Fast analytical queries** with columnar storage
+- **Efficient compression** ~10x compression ratio
+- **Real-time ingestion** thousands of rows per second
+- **Horizontal scaling** for large datasets
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+---
+
+## 📞 Support
+
+For questions or issues:
+- Create an Issue in this repository
+- Contact the maintainer
+
+---
+
+## 📜 License
+
+This project is open-source and available under the MIT License.
+
+---
+
+**Author**: *Banking Data Engineering Team*  
+**Powered by**: ClickHouse, DBT, Airflow, Kafka & Modern Data Stack
 
 **Удачи в изучении Modern Data Stack! 🚀**
