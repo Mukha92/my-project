@@ -22,13 +22,13 @@ sequenceDiagram
     participant Reporter as Reporter (Excel)
 
     Main->>Gen: generate(count=1000)
-    Gen-->>Main: CSV Path
+    Gen-->>Main: CSV Path (Data/Date)
     Main->>Loader: load(CSV Path)
     Loader-->>Main: DataFrame
     Main->>Analyzer: analyze(DataFrame)
     Analyzer-->>Main: Metrics Dict
     Main->>Reporter: save_report(Metrics, Path)
-    Reporter-->>Main: Done
+    Reporter-->>Main: Done (Reports/Date)
 ```
 
 ## Установка
@@ -48,22 +48,71 @@ make run
 # или
 poetry run python -m employee_pipeline.main
 ```
+Результаты будут сохранены в:
+- `output/data/employees_YYYY-MM-DD.csv`
+- `output/reports/report_YYYY-MM-DD.xlsx`
 
 ## Тестирование и QA
-Запуск тестов с проверкой покрытия:
+### Общий запуск
+Все тесты с проверкой покрытия:
 ```bash
 make test
+# или
+poetry run pytest --cov=employee_pipeline
 ```
 
-Линтинг и проверка типов:
+### Запуск по модулям
+Можно запускать тесты для каждого модуля отдельно:
+
+**Domain (Models & Interfaces):**
+```bash
+make test-domain
+# или
+poetry run pytest tests/test_domain.py
+```
+
+**Generation:**
+```bash
+make test-generate
+# или
+poetry run pytest tests/test_generate.py
+```
+
+**Transformation (Load & Analyze):**
+```bash
+make test-transform
+# или
+poetry run pytest tests/test_transform.py
+```
+
+**Reporting:**
+```bash
+make test-load
+# или
+poetry run pytest tests/test_load.py
+```
+
+### Линтинг и Типы
 ```bash
 make lint
+# или
+poetry run ruff check . && poetry run mypy .
 ```
+
+## Документация
+Сборка документации MkDocs:
+```bash
+make docs
+```
+
+## CI/CD
+Настроен GitHub Actions workflow (`.github/workflows/ci.yml`), который автоматически запускает линтинг и тесты при пуше в `main`.
 
 ## Технологии
 - **Python 3.12**
-- **Poetry**: Управление зависимостями.
-- **Pandas**: Обработка данных.
-- **Faker**: Генерация данных.
-- **Mypy**: Статическая типизация (Strict).
-- **Ruff**: Линтер и форматтер.
+- **Poetry**
+- **Pandas**
+- **Faker**
+- **Mypy** (Strict)
+- **Ruff**
+- **MkDocs / Sphinx**
