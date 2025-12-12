@@ -1,105 +1,69 @@
 # Employee Data Pipeline
 
-## Описание Проекта
-Простой, но мощный ETL-пайплайн для генерации, обработки и анализа синтетических данных о сотрудниках. Этот проект служит эталонной реализацией production-grade приложения на Python, следующего современным лучшим практикам и принципам SOLID.
+![Status](https://img.shields.io/badge/status-active-success.svg)
+![Python](https://img.shields.io/badge/python-3.12-blue.svg)
+![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)
 
-## Функциональность
-- **Генерация Данных (Generate)**: масштабируемая генерация синтетических данных с использованием `Faker`.
-- **ETL Процесс**: Валидация, загрузка, проверка качества и трансформация данных.
-- **Анализ (Analyze)**: Расчет ключевых HR-метрик (статистика по зарплатам, удержание, возрастное распределение).
-- **Отчетность (Report)**: Экспорт консолидированных отчетов в Excel.
-- **Высокие Стандарты Качества**:
-    - **100% Типобезопасность** (`mypy --strict`).
-    - **Тестирование** (`pytest` с покрытием 90%+).
-    - **Линтинг** (`ruff`, `codespell`).
-    - **Документирование** (Google-style docstrings, Sphinx/MkDocs).
+## Описание
+Простой, но полноценный ETL-пайплайн для генерации, обработки и анализа синтетических данных о сотрудниках. Проект демонстрирует современные практики разработки на Python (SOLID, Type Hinting, Testing).
 
-## Этапы Пайплайна
-1. **Generate**: Создание `employees.csv` с синтетическими данными.
-2. **Check & Load**: Проверка наличия файла и схемы, загрузка в `pandas`.
-3. **Analyze**: Расчет метрик (средняя зарплата, отделы и т.д.).
-4. **Report**: Сохранение результатов в `report.xlsx`.
-
-## Архитектура (SOLID)
-- **SRP**: отдельные модули для Генерации, Загрузки, Анализа, Отчетности.
-- **OCP**: Интерфейсы для Источников Данных и Форматов Отчетов позволяют расширение без модификации.
-- **LSP**: Подклассы `DataSource` или `ReportGenerator` взаимозаменяемы.
-- **ISP**: Маленькие, специфические интерфейсы (например, `IDataLoader`, `IMetricsCalculator`).
-- **DIP**: Высокоуровневый пайплайн зависит от абстракций, а не от конкретных реализаций.
-
-## Поток Пайплайна (Sequence Diagram)
+## Структура Проекта (Architecture)
+Проект построен по модульному принципу:
+- **Generate**: Генерация данных (Faker).
+- **Transform**: Загрузка (Pandas) и Анализ данных.
+- **Load**: Сохранение отчетов (Excel).
 
 ```mermaid
 sequenceDiagram
-    participant Main
-    participant Pipeline
-    participant Generator
-    participant Loader
-    participant Analyzer
-    participant Reporter
+    participant Main as Main Pipeline
+    participant Gen as Generator (Faker)
+    participant Loader as Loader (Pandas)
+    participant Analyzer as Analyzer (Pandas)
+    participant Reporter as Reporter (Excel)
 
-    Main->>Pipeline: run(count)
-    Pipeline->>Generator: generate(csv_path, count)
-    Generator-->>Pipeline: (file created)
-    Pipeline->>Loader: load(csv_path)
-    Loader-->>Pipeline: DataFrame
-    Pipeline->>Analyzer: analyze(DataFrame)
-    Analyzer-->>Pipeline: AnalysisResult
-    Pipeline->>Reporter: save_report(result, report.xlsx)
-    Reporter-->>Pipeline: (report saved)
-    Pipeline-->>Main: Success
+    Main->>Gen: generate(count=1000)
+    Gen-->>Main: CSV Path
+    Main->>Loader: load(CSV Path)
+    Loader-->>Main: DataFrame
+    Main->>Analyzer: analyze(DataFrame)
+    Analyzer-->>Main: Metrics Dict
+    Main->>Reporter: save_report(Metrics, Path)
+    Reporter-->>Main: Done
 ```
 
-## Архитектура (Class Diagram)
+## Установка
 
-```mermaid
-classDiagram
-    class IDataGenerator {
-        <<interface>>
-        +generate(path, count)
-    }
-    class IDataLoader {
-        <<interface>>
-        +load(path)
-    }
-    class IAnalyzer {
-        <<interface>>
-        +analyze(df)
-    }
-    class IReporter {
-        <<interface>>
-        +save_report(result, path)
-    }
-
-    class FakerGenerator {
-        +generate(path, count)
-    }
-    class CSVLoader {
-        +load(path)
-    }
-    class PandasAnalyzer {
-        +analyze(df)
-    }
-    class ExcelReporter {
-        +save_report(result, path)
-    }
-
-    class ETLPipeline {
-        +run(csv, report, count)
-    }
-
-    ETLPipeline --> IDataGenerator
-    ETLPipeline --> IDataLoader
-    ETLPipeline --> IAnalyzer
-    ETLPipeline --> IReporter
-
-    FakerGenerator ..|> IDataGenerator
-    CSVLoader ..|> IDataLoader
-    PandasAnalyzer ..|> IAnalyzer
-    ExcelReporter ..|> IReporter
+1. Убедитесь, что установлен Python 3.12+ и Poetry.
+2. Клонируйте репозиторий.
+3. Установите зависимости:
+```bash
+make install
+# или
+poetry install
 ```
 
-## Инфраструктура
-- **Управление Зависимостями**: Poetry.
-- **CI/CD**: GitHub Actions (Lint, Test, Type Check).
-- **Автоматизация**: Makefile для типовых задач.
+## Запуск
+```bash
+make run
+# или
+poetry run python -m employee_pipeline.main
+```
+
+## Тестирование и QA
+Запуск тестов с проверкой покрытия:
+```bash
+make test
+```
+
+Линтинг и проверка типов:
+```bash
+make lint
+```
+
+## Технологии
+- **Python 3.12**
+- **Poetry**: Управление зависимостями.
+- **Pandas**: Обработка данных.
+- **Faker**: Генерация данных.
+- **Mypy**: Статическая типизация (Strict).
+- **Ruff**: Линтер и форматтер.
